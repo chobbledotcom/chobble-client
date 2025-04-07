@@ -1,4 +1,4 @@
-name: Build and Deploy to Neocities
+name: Build and Deploy
 
 on:
   push:
@@ -36,3 +36,17 @@ jobs:
           neocities_supporter: true
           preview_before_deploy: false
           dist_dir: dist
+
+      - name: Deploy to Bunny
+        uses: R-J-dev/bunny-deploy@v2.0.6
+        with:
+          access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
+          directory-to-upload: "./dist"
+          storage-endpoint: "https://uk.storage.bunnycdn.com"
+          storage-zone-name: "REPLACE-THIS"
+          storage-zone-password: ${{ secrets.BUNNY_STORAGE_ZONE_PASSWORD }}
+          concurrency: "5"
+          enable-delete-action: true
+          enable-purge-pull-zone: true
+          pull-zone-id: "0123456789"
+          replication-timeout: "15000"
