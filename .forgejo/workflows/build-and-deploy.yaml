@@ -69,10 +69,8 @@ jobs:
           rsync \
             --recursive \
             --verbose \
-            --no-perms \
-            --chmod=ugo=rwX \
-            source/.image-cache \
-            combined/
+            source/.image-cache/ \
+            combined/.image-cache/
 
       # - name: Copy Forgejo cache into combined dir
       #   run: |
@@ -82,8 +80,8 @@ jobs:
       #       --verbose \
       #       --no-perms \
       #       --chmod=ugo=rwX \
-      #       .image-cache \
-      #       combined/
+      #       .image-cache/ \
+      #       combined/.image-cache/
 
       - name: Update site.json with secrets
         run: |
@@ -101,11 +99,7 @@ jobs:
             --skip-cached \
             --flake ".#packages.x86_64-linux.site" \
             --no-nom
-
-      - name: Delete all but result
-        run: |
-          mv combined/result- result
-          rm -rf combined source template
+          mv result- ../result
 
       # - name: Copy .image-cache out of result
       #   run: |
@@ -148,4 +142,4 @@ jobs:
         run: |
           find . -type d -exec chmod 755 {} \;
           find . -type f -exec chmod 644 {} \;
-          rm -rf result .image-cache
+          rm -rf combined source template result .image-cache
