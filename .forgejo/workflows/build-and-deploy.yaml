@@ -5,48 +5,167 @@ on:
   workflow_dispatch:
 
 env:
-  NIX_PATH: nixpkgs=/nix/var/nix/profiles/per-user/root/channels/nixos
   NEOCITIES_API_KEY: ${{ secrets.NEOCITIES_API_KEY }}
 
 jobs:
   build:
     runs-on: native
     steps:
-      - name: Checkout
+      - name: Checkout this repo
         uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout Chobble Template
+        uses: actions/checkout@v4
+        with:
+          repository: chobble/chobble-template
+          ref: main
+          path: template
+          sparse-checkout: |
+            flake.nix
+            flake.lock
+            bin
+            src
+
+      - name: Get Eleventy .cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .image-cache
+          key: eleventy-img-cache
+          fail-on-cache-miss: false
+
+      - name: Make combined dir
+        run: mkdir combined
+
+      - name: Copy template files to combined dir
+        run: |
+          rsync \
+            --recursive \
+            --verbose \
+            --no-perms \
+            --chmod=ugo=rwX \
+            --delete \
+            --exclude=".git" \
+            --exclude="node_modules" \
+            --exclude="*.md" \
+            template/ \
+            combined/
+
+      - name: Overlay our repo files into combined src
+        run: |
+          rsync \
+            --recursive \
+            --verbose \
+            --exclude=".git" \
+            --exclude="*.nix" \
+            --exclude="README.md" \
+            --exclude=".forgejo" \
+            --exclude=".image-cache" \
+            source/ \
+            combined/src/
+
+      - name: Copy .image-cache folder in separately
+        run: |
+          rsync \
+            --recursive \
+            --verbose \
+            --no-perms \
+            --chmod=ugo=rwX \
+            --include="*.jpeg" \
+            --include="*.webp" \
+            source/.image-cache \
+            combined/
+
+      - name: Make Forgejo cache dir
+        run: mkdir -p .image-cache
+
+      - name: Copy Forgejo cache into combined dir
+        run: |
+          rsync \
+            --recursive \
+            --verbose \
+            --no-perms \
+            --chmod=ugo=rwX \
+            --include="*.jpeg" \
+            --include="*.webp" \
+            .image-cache/ \
+            combined/.image-cache/
 
       - name: Update site.json with secrets
         run: |
-          sed -i 's/"formspark_id": "[^"]*"/"formspark_id": "${{ secrets.FORMSPARK_ID }}"/g' _data/site.json
-          sed -i 's/"botpoison_public_key": "[^"]*"/"botpoison_public_key": "${{ secrets.BOTPOISON_PUBLIC_KEY }}"/g' _data/site.json
+          sed -i \
+            's/"formspark_id": null/"formspark_id": "${{ secrets.FORMSPARK_ID }}"/g' \
+            "combined/src/_data/site.json"
+          sed -i \
+            's/"botpoison_public_key": null/"botpoison_public_key": "${{ secrets.BOTPOISON_PUBLIC_KEY }}"/g' \
+            "combined/src/_data/site.json"
 
-      - name: Build
-        id: build
+      - name: Build with Nix
         run: |
-          DEPLOY_PATH="$GITHUB_WORKSPACE/dist"
-          mkdir -p "$DEPLOY_PATH"
-          nix-fast-build --skip-cached --flake ".#packages.x86_64-linux.site" --no-nom
-          cp -r result-/* "$DEPLOY_PATH"/
+          cd combined
+          nix-fast-build \
+            --skip-cached \
+            --flake ".#packages.x86_64-linux.site" \
+            --no-nom
 
-      - name: Deploy to neocities
+      - name: Delete all but result
+        run: |
+          mv combined/result- result
+          rm -rf combined source template
+
+      - name: Copy .image-cache out of result
+        run: |
+          rsync -a \
+            --delete \
+            --include="*.jpeg" \
+            --include="*.webp" \
+            result/.image-cache/ \
+            .image-cache/
+
+      # - name: Save .image-cache to Forgejo cache
+      #   uses: actions/cache/save@v4
+      #   with:
+      #     path: ${{ github.workspace }}/.image-cache
+      #     key: eleventy-img-cache
+
+      - name: Copy built site out of result
+        run: |
+          mkdir built-site
+          rsync \
+            --recursive \
+            --verbose \
+            --no-perms \
+            --chmod=ugo=rwX \
+            --exclude=".image-cache" \
+            result/_site/ \
+            built-site/
+
+      - name: Deploy to Neocities
         uses: bcomnes/deploy-to-neocities@v3
         with:
           api_key: ${{ secrets.NEOCITIES_API_KEY }}
           cleanup: true
           neocities_supporter: true
           preview_before_deploy: false
-          dist_dir: dist
+          dist_dir: ./built-site
 
       - name: Deploy to Bunny
         uses: R-J-dev/bunny-deploy@v2.0.6
         with:
           access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
-          directory-to-upload: "./dist"
-          storage-endpoint: "https://uk.storage.bunnycdn.com"
+          directory-to-upload: built-site
+          storage-endpoint: "https://storage.bunnycdn.com"
           storage-zone-name: "REPLACE-THIS"
           storage-zone-password: ${{ secrets.BUNNY_STORAGE_ZONE_PASSWORD }}
           concurrency: "5"
           enable-delete-action: true
           enable-purge-pull-zone: true
-          pull-zone-id: "0123456789"
+          pull-zone-id: "REPLACE-THIS"
           replication-timeout: "15000"
+
+      - name: Clean up
+        run: |
+          find . -type d -exec chmod 755 {} \;
+          find . -type f -exec chmod 644 {} \;
+          rm -rf result .image-cache built-site
