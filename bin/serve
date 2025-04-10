@@ -20,35 +20,52 @@ else
   git reset --hard origin/main
 fi
 
-mkdir -p "$COMBINED_DIR"
+mkdir -p "$COMBINED_DIR/.image-cache"
 
 find "$COMBINED_DIR" -type f -name "*.md" -delete
 
 rsync \
   --recursive \
-  --update \
   --delete \
   --exclude=".git" \
   --exclude="node_modules" \
   --exclude="*.md" \
   "$TEMPLATE_DIR/" "$COMBINED_DIR/"
 
+rsync \
+    --recursive \
+    --exclude=".git" \
+    --exclude="*.nix" \
+    --exclude="README.md" \
+    --exclude=".image-cache" \
+    "$CLIENT_DIR/" "$COMBINED_DIR/src/"
+
+rsync \
+    --recursive \
+    "$CLIENT_DIR/.image-cache/" "$COMBINED_DIR/.image-cache"
+
 sync_client_files() {
   rsync \
     --recursive \
     --update \
-    --exclude=".git" \
-    --exclude="*.nix" \
-    --exclude="README.md" \
+    --include="*/" \
+    --include="**/*.md" \
+    --include="**/*.scss" \
+    --exclude="*" \
     "$CLIENT_DIR/" "$COMBINED_DIR/src/"
 }
 
 sync_client_files
 
 watch_and_sync() {
-  inotifywait -m -r -e modify,create,delete,move -q "$CLIENT_DIR" | while read -r directory event filename; do
-    sync_client_files
-  done
+  inotifywait \
+    -m -r \
+    -e modify,create,delete,move \
+    -q \
+    --include '.*\.(md|json|scss)$' \
+    "$CLIENT_DIR" | while read -r directory event filename; do
+      sync_client_files
+    done
 }
 
 watch_and_sync &
@@ -75,13 +92,10 @@ cleanup_serve() {
   pkill -P $$
   kill $ELEVENTY_PID $SASS_PID $WATCH_PID 2>/dev/null
   pkill -f "inotifywait.*$CLIENT_DIR"
+  exit 0
 }
 
 trap cleanup_serve EXIT INT TERM
 
-echo "Development server running at http://localhost:8080"
-echo "Press Ctrl+C to stop"
-
-wait -n
-cleanup_serve
+wait
 trap - EXIT INT TERM

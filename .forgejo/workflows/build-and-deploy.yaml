@@ -92,6 +92,11 @@ jobs:
             's/"botpoison_public_key": null/"botpoison_public_key": "${{ secrets.BOTPOISON_PUBLIC_KEY }}"/g' \
             "combined/src/_data/site.json"
 
+      - name: Run `nix flake update`
+        run: |
+          cd combined
+          nix flake update
+
       - name: Build with Nix
         run: |
           cd combined
@@ -130,12 +135,12 @@ jobs:
           access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
           directory-to-upload: result/_site
           storage-endpoint: "https://storage.bunnycdn.com"
-          storage-zone-name: "REPLACE_THIS"
+          storage-zone-name: ${{ secrets.BUNNY_STORAGE_ZONE_NAME }}
           storage-zone-password: ${{ secrets.BUNNY_STORAGE_ZONE_PASSWORD }}
           concurrency: "5"
           enable-delete-action: true
           enable-purge-pull-zone: true
-          pull-zone-id: "REPLACE_THIS"
+          pull-zone-id: ${{ secrets.BUNNY_PULL_ZONE_ID }}
           replication-timeout: "15000"
 
       - name: Clean up
