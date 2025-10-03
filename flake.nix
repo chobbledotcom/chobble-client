@@ -16,6 +16,7 @@
               "sync-files"
               "watch"
               "update-pages"
+              "fetch-google-reviews"
               "clean"
             ];
           };
@@ -26,13 +27,14 @@
             cat <<EOF
 
             Available commands:
-             serve        - Start development server
-             build        - Build the project
-             prepare-dev  - Prepare development environment
-             sync-files   - Synchronize files
-             watch        - Watch for changes
-             update-pages - Update pages
-             clean        - Clean build directory
+             serve               - Start development server
+             build               - Build the project
+             prepare-dev         - Prepare development environment
+             sync-files          - Synchronize files
+             watch               - Watch for changes
+             update-pages        - Update pages
+             fetch-google-reviews - Fetch Google Maps reviews
+             clean               - Clean build directory
 
             EOF
             git pull
