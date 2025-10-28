@@ -61,10 +61,10 @@ jobs:
         run: |
           sed -i \
             's/"formspark_id": null/"formspark_id": "${{ secrets.FORMSPARK_ID }}"/g' \
-            "combined/src/_data/site.json"
+            "combined/src/_data/config.json"
           sed -i \
             's/"botpoison_public_key": null/"botpoison_public_key": "${{ secrets.BOTPOISON_PUBLIC_KEY }}"/g' \
-            "combined/src/_data/site.json"
+            "combined/src/_data/config.json"
 
       - name: Upload combined directory
         uses: actions/upload-artifact@v4
@@ -108,29 +108,30 @@ jobs:
           mkdir -p ../_site
           mv _site/* ../_site/
 
-      - name: Upload built site
-        uses: actions/upload-artifact@v4
-        with:
-          name: built-site
-          path: _site/
-          retention-days: 1
+      - name: Set deployment environment
+        id: deployment_env
+        run: |
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "storage_zone_name=${{ secrets.BUNNY_PRODUCTION_STORAGE_ZONE_NAME }}" >> $GITHUB_OUTPUT
+            echo "storage_zone_password=${{ secrets.BUNNY_PRODUCTION_STORAGE_ZONE_PASSWORD }}" >> $GITHUB_OUTPUT
+            echo "pull_zone_id_deploy=${{ secrets.BUNNY_PRODUCTION_PULL_ZONE_ID }}" >> $GITHUB_OUTPUT
+          else
+            echo "storage_zone_name=${{ secrets.BUNNY_STAGING_STORAGE_ZONE_NAME }}" >> $GITHUB_OUTPUT
+            echo "storage_zone_password=${{ secrets.BUNNY_STAGING_STORAGE_ZONE_PASSWORD }}" >> $GITHUB_OUTPUT
+            echo "pull_zone_id_deploy=${{ secrets.BUNNY_STAGING_PULL_ZONE_ID }}" >> $GITHUB_OUTPUT
+          fi
 
-  deploy:
-    name: Deploy
-    needs: [setup, build]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download built site
-        uses: actions/download-artifact@v4
+      - name: Deploy to Bunny
+        uses: R-J-dev/bunny-deploy@v2.0.6
         with:
-          name: built-site
-          path: _site
+          access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
+          directory-to-upload: _site
+          storage-endpoint: "https://storage.bunnycdn.com"
+          storage-zone-name: ${{ steps.deployment_env.outputs.storage_zone_name }}
+          storage-zone-password: ${{ steps.deployment_env.outputs.storage_zone_password }}
+          concurrency: "5"
+          enable-delete-action: true
+          enable-purge-pull-zone: true
+          pull-zone-id: ${{ steps.deployment_env.outputs.pull_zone_id_deploy }}
+          replication-timeout: "15000"
 
-      - name: Deploy to neocities
-        uses: bcomnes/deploy-to-neocities@v3
-        with:
-          api_key: ${{ secrets.NEOCITIES_API_KEY }}
-          cleanup: true
-          neocities_supporter: true
-          preview_before_deploy: false
-          dist_dir: _site
