@@ -111,16 +111,18 @@ function saveReview(review, outputDir) {
     return false; // Skip existing
   }
 
+  const rating = review.rating || 5;
   const content = `---
 name: ${review.author}
 url: ${review.authorUrl}
+rating: ${rating}
 ---
 
 ${review.content}
 `;
 
   fs.writeFileSync(filepath, content);
-  console.log(`✓ ${filename} (${review.rating}/5 stars)`);
+  console.log(`✓ ${filename} (${rating}/5 stars)`);
   return true;
 }
 
