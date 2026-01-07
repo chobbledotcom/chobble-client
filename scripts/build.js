@@ -1,20 +1,21 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const { prep } = require('./prepare-dev');
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
 
-const root = path.resolve(__dirname, '..');
-const dev = path.join(root, '.build', 'dev');
-const output = path.join(root, '_site');
+import { prep } from "./prepare-dev.js";
+
+const root = path.resolve(import.meta.dirname, "..");
+const dev = path.join(root, ".build", "dev");
+const output = path.join(root, "_site");
 
 prep();
 
-console.log('Building site...');
+console.log("Building site...");
 
 fs.rmSync(output, { recursive: true, force: true });
 
-execSync('pnpm exec eleventy', { cwd: dev, stdio: 'inherit' });
+execSync("bun run build", { cwd: dev, stdio: "inherit" });
 
-execSync(`mv "${path.join(dev, '_site')}" "${output}"`);
+execSync(`mv "${path.join(dev, "_site")}" "${output}"`);
 
-console.log(`✓ Built to _site/`);
+console.log("Built to _site/");

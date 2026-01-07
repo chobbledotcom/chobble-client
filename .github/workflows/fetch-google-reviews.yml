@@ -11,23 +11,21 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
       - name: Fetch Google Reviews
         env:
           APIFY_API_TOKEN: ${{ secrets.APIFY_API_TOKEN }}
         run: |
-          node scripts/fetch-google-reviews.js
+          bun scripts/fetch-google-reviews.js
 
       - name: Check for changes
         id: verify-changed-files
