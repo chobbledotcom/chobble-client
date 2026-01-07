@@ -33,8 +33,6 @@ export function prep() {
     execSync("git reset --hard && git pull", { cwd: template });
   }
 
-  fs.rmSync(path.join(template, "test"), { recursive: true, force: true });
-
   execSync(`find "${dev}" -type f -name "*.md" -delete 2>/dev/null || true`);
 
   const templateExcludeArgs = templateExcludes

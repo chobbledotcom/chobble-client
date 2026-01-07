@@ -22,6 +22,7 @@
               "update-pages"
               "fetch-google-reviews"
               "clean"
+              "test"
             ];
           };
         in
@@ -48,6 +49,7 @@
                update-pages        - Update pages
                fetch-google-reviews - Fetch Google Maps reviews
                clean               - Clean build directory
+               test                - Run tests
 
               EOF
               git pull
