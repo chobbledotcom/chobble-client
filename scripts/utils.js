@@ -1,4 +1,5 @@
 import { resolve, join, extname } from "node:path";
+import { rmSync, mkdirSync, cpSync, renameSync, existsSync } from "node:fs";
 
 // Paths
 export const root = resolve(import.meta.dir, "..");
@@ -11,15 +12,65 @@ export const read = (p) => file(p).text();
 export const readJson = async (p) => JSON.parse(await read(p));
 export const write = Bun.write;
 
-// Shell commands
+// Filesystem commands
+export const fs = {
+  exists: existsSync,
+  rm: (p) => rmSync(p, { recursive: true, force: true }),
+  mkdir: (p) => mkdirSync(p, { recursive: true }),
+  cp: (src, dest) => cpSync(src, dest, { recursive: true }),
+  mv: renameSync,
+};
+
+// Shell primitives
 export const run = (cmd, opts = {}) =>
   Bun.spawnSync(cmd, { stdio: ["inherit", "inherit", "inherit"], ...opts });
 
 export const shell = (cmd, opts = {}) =>
-  run(["sh", "-c", cmd], opts);
+  run(["sh", "--", "-c", cmd], opts);
 
 export const spawn = (cmd, opts = {}) =>
   Bun.spawn(cmd, { stdio: ["inherit", "inherit", "inherit"], ...opts });
+
+// Git commands
+export const git = {
+  clone: (repo, dest, opts = {}) =>
+    run(["git", "clone", "--depth", String(opts.depth || 1), repo, dest]),
+
+  pull: (dir) =>
+    run(["git", "--git-dir", join(dir, ".git"), "--work-tree", dir, "pull"]),
+
+  reset: (dir, opts = {}) =>
+    run(["git", "--git-dir", join(dir, ".git"), "--work-tree", dir, "reset", opts.hard ? "--hard" : "--soft"]),
+};
+
+// Rsync commands
+const rsyncExcludes = (list) => list.flatMap((e) => ["--exclude", e]);
+const rsyncIncludes = (list) => list.flatMap((e) => ["--include", e]);
+
+export const rsync = (src, dest, opts = {}) => run([
+  "rsync",
+  "--recursive",
+  ...(opts.update ? ["--update"] : []),
+  ...(opts.delete ? ["--delete"] : []),
+  ...rsyncExcludes(opts.exclude || []),
+  ...rsyncIncludes(opts.include || []),
+  src.endsWith("/") ? src : `${src}/`,
+  dest.endsWith("/") ? dest : `${dest}/`,
+]);
+
+// Bun commands
+export const bun = {
+  install: (cwd) => run(["bun", "install"], { cwd }),
+  run: (script, cwd) => run(["bun", "run", script], { cwd }),
+  test: (cwd) => run(["bun", "test"], { cwd }),
+  spawn: (script, cwd) => spawn(["bun", "run", script], { cwd, shell: true }),
+};
+
+// Find commands
+export const find = {
+  deleteByExt: (dir, ext) =>
+    shell(`find "${dir}" -type f -name "*${ext}" -delete 2>/dev/null || true`),
+};
 
 // Utilities
 export const ext = extname;

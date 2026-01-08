@@ -1,6 +1,5 @@
-import { rmSync, renameSync } from "node:fs";
 import { join } from "node:path";
-import { path, run } from "./utils.js";
+import { path, fs, bun } from "./utils.js";
 import { prep } from "./prepare-dev.js";
 
 const dev = path(".build", "dev");
@@ -10,8 +9,8 @@ prep();
 
 console.log("Building site...");
 
-rmSync(output, { recursive: true, force: true });
-run(["bun", "run", "build"], { cwd: dev });
-renameSync(join(dev, "_site"), output);
+fs.rm(output);
+bun.run("build", dev);
+fs.mv(join(dev, "_site"), output);
 
 console.log("Built to _site/");

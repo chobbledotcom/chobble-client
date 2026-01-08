@@ -1,19 +1,17 @@
-import { rmSync, cpSync, existsSync } from "node:fs";
-import { path, run } from "./utils.js";
+import { path, fs, bun } from "./utils.js";
 import { prep } from "./prepare-dev.js";
 
-const template = path(".build", "template");
-const dev = path(".build", "dev");
 const templateTest = path(".build", "template", "test");
 const devTest = path(".build", "dev", "test");
+const dev = path(".build", "dev");
 
 prep();
 
-if (existsSync(templateTest)) {
+if (fs.exists(templateTest)) {
   console.log("Copying test directory...");
-  rmSync(devTest, { recursive: true, force: true });
-  cpSync(templateTest, devTest, { recursive: true });
+  fs.rm(devTest);
+  fs.cp(templateTest, devTest);
 }
 
 console.log("Running tests...");
-run(["bun", "test"], { cwd: dev });
+bun.test(dev);

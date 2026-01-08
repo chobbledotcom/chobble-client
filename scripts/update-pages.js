@@ -1,7 +1,7 @@
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { path, run, spawn, read, exists } from "./utils.js";
+import { fs, git, bun, read, write, exists } from "./utils.js";
 
 const TEMPLATE_REPO = "https://github.com/chobbledotcom/chobble-template.git";
 const TEMPLATE_RAW_URL =
@@ -13,8 +13,7 @@ const fetchPages = async () => {
   const res = await fetch(TEMPLATE_RAW_URL);
   if (!res.ok) throw new Error(`Failed to fetch .pages.yml: ${res.status}`);
 
-  const content = (await res.text()).replace(/src\//g, "");
-  writeFileSync(".pages.yml", content);
+  await write(".pages.yml", (await res.text()).replace(/src\//g, ""));
   console.log("Updated .pages.yml from chobble-template (with src/ removed)");
 };
 
@@ -22,37 +21,36 @@ const customisePages = async () => {
   const tempDir = mkdtempSync(join(tmpdir(), "chobble-template-"));
 
   console.log("Cloning chobble-template...");
-  const clone = run(["git", "clone", "--depth", "1", TEMPLATE_REPO, tempDir]);
+  const clone = git.clone(TEMPLATE_REPO, tempDir);
   if (clone.exitCode !== 0) throw new Error("Failed to clone chobble-template");
 
   console.log("Installing dependencies...");
-  const install = run(["bun", "install"], { cwd: tempDir });
+  const install = bun.install(tempDir);
   if (install.exitCode !== 0) {
-    rmSync(tempDir, { recursive: true, force: true });
+    fs.rm(tempDir);
     throw new Error("Failed to install dependencies");
   }
 
   console.log("\nStarting CMS customisation TUI...\n");
 
-  const proc = spawn(["bun", "run", "customise-cms"], { cwd: tempDir });
+  const proc = bun.spawn("customise-cms", tempDir);
   const code = await proc.exited;
 
   if (code !== 0) {
-    rmSync(tempDir, { recursive: true, force: true });
+    fs.rm(tempDir);
     throw new Error(`customise-cms exited with code ${code}`);
   }
 
   const pagesPath = join(tempDir, "src", ".pages.yml");
   if (!(await exists(pagesPath))) {
-    rmSync(tempDir, { recursive: true, force: true });
+    fs.rm(tempDir);
     throw new Error("No .pages.yml found after customisation");
   }
 
-  const content = (await read(pagesPath)).replace(/src\//g, "");
-  writeFileSync(".pages.yml", content);
+  await write(".pages.yml", (await read(pagesPath)).replace(/src\//g, ""));
 
   console.log("\nCleaning up...");
-  rmSync(tempDir, { recursive: true, force: true });
+  fs.rm(tempDir);
   console.log("Updated .pages.yml with your customisations (with src/ removed)");
 };
 

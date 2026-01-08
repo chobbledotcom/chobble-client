@@ -1,8 +1,7 @@
 #!/usr/bin/env bun
 
-import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { path, exists, readJson, loadEnv } from "./utils.js";
+import { path, exists, readJson, write, fs, loadEnv } from "./utils.js";
 
 await loadEnv();
 
@@ -14,15 +13,12 @@ const CONFIG = {
 };
 
 const formatFilename = (name, date) => {
-  const safeName = (name || "anonymous")
+  const safeName = name
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
     .replace(/\s+/g, "-")
     .substring(0, 30);
-  const safeDate = date instanceof Date && !Number.isNaN(date.getTime())
-    ? date.toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0];
-  return `${safeName}-google-${safeDate}.md`;
+  return `${safeName}-google-${date.toISOString().split("T")[0]}.md`;
 };
 
 const fetchReviews = async (placeId, opts = {}) => {
@@ -49,13 +45,13 @@ const fetchReviews = async (placeId, opts = {}) => {
   return results
     .flatMap((item) => item.reviews || [])
     .map((r) => ({
-      content: r.text || r.reviewText || "",
-      date: r.publishedAtDate ? new Date(r.publishedAtDate) : new Date(),
-      rating: r.stars || r.rating || 0,
-      author: r.name || r.authorName || "Anonymous",
-      authorUrl: r.reviewerUrl || r.authorUrl || "",
+      content: r.text || r.reviewText,
+      date: new Date(r.publishedAtDate),
+      rating: r.stars,
+      author: r.name || r.authorName,
+      authorUrl: r.reviewerUrl || r.authorUrl,
     }))
-    .filter((r) => r.content.length > 5);
+    .filter((r) => r.content?.length > 5);
 };
 
 const saveReview = async (review, dir) => {
@@ -64,17 +60,16 @@ const saveReview = async (review, dir) => {
 
   if (await exists(filepath)) return false;
 
-  const content = `---
+  await write(filepath, `---
 name: ${review.author}
 url: ${review.authorUrl}
-rating: ${review.rating || 5}
+rating: ${review.rating}
 ---
 
 ${review.content}
-`;
+`);
 
-  writeFileSync(filepath, content);
-  console.log(`${filename} (${review.rating || 5}/5 stars)`);
+  console.log(`${filename} (${review.rating}/5 stars)`);
   return true;
 };
 
@@ -96,7 +91,7 @@ const main = async () => {
     process.exit(1);
   }
 
-  mkdirSync(CONFIG.reviewsDir, { recursive: true });
+  fs.mkdir(CONFIG.reviewsDir);
 
   const reviews = await fetchReviews(siteConfig.google_place_id);
   console.log(`Found ${reviews.length} reviews`);
