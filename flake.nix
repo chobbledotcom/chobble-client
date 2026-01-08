@@ -13,7 +13,7 @@
           pkgs = import <nixpkgs> { inherit system; };
           bunScripts = pkgs.symlinkJoin {
             name = "bun-scripts";
-            paths = map (cmd: pkgs.writeShellScriptBin cmd "bun run ${cmd}") [
+            paths = map (cmd: pkgs.writeShellScriptBin cmd "bun run ${cmd} -- \"$@\"") [
               "serve"
               "build"
               "prepare-dev"
