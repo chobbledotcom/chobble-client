@@ -32,8 +32,7 @@ export const prep = () => {
 
   sync();
 
-  const bunTag = join(dev, "node_modules", ".bun-tag");
-  if (!fs.exists(join(dev, "node_modules")) || !fs.exists(bunTag)) {
+  if (!fs.exists(join(dev, "node_modules"))) {
     console.log("Installing dependencies...");
     bun.install(dev);
   }
