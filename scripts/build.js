@@ -1,20 +1,17 @@
-import fs from "node:fs";
-import path from "node:path";
-
+import { rmSync, renameSync } from "node:fs";
+import { join } from "node:path";
+import { path, run } from "./utils.js";
 import { prep } from "./prepare-dev.js";
 
-const root = path.resolve(import.meta.dirname, "..");
-const dev = path.join(root, ".build", "dev");
-const output = path.join(root, "_site");
+const dev = path(".build", "dev");
+const output = path("_site");
 
 prep();
 
 console.log("Building site...");
 
-fs.rmSync(output, { recursive: true, force: true });
-
-Bun.spawnSync(["bun", "run", "build"], { cwd: dev, stdio: ["inherit", "inherit", "inherit"] });
-
-fs.renameSync(path.join(dev, "_site"), output);
+rmSync(output, { recursive: true, force: true });
+run(["bun", "run", "build"], { cwd: dev });
+renameSync(join(dev, "_site"), output);
 
 console.log("Built to _site/");
