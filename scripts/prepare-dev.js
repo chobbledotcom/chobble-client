@@ -1,96 +1,52 @@
-import fs from "node:fs";
-import path from "node:path";
-
+import { join } from "node:path";
+import { root, path, fs, git, rsync, bun, find } from "./utils.js";
 import { buildDir, templateRepo } from "./consts.js";
 
-const root = path.resolve(import.meta.dirname, "..");
-const build = path.join(root, buildDir);
-const template = path.join(build, "template");
-const dev = path.join(build, "dev");
+const build = path(buildDir);
+const template = path(buildDir, "template");
+const dev = path(buildDir, "dev");
 
 const templateExcludes = [".git", "node_modules", "*.md", "test", "test-*"];
 const rootExcludes = [
-	".git",
-	"*.nix",
-	"README.md",
-	buildDir,
-	"scripts",
-	"node_modules",
-	"package*.json",
-	"bun.lock",
-	"old_site",
+  ".git", "*.nix", "README.md", buildDir, "scripts",
+  "node_modules", "package*.json", "bun.lock", "old_site",
 ];
 
-export function prep() {
-	console.log("Preparing build...");
-	fs.mkdirSync(build, { recursive: true });
+export const prep = () => {
+  console.log("Preparing build...");
+  fs.mkdir(build);
 
-	if (!fs.existsSync(path.join(template, ".git"))) {
-		console.log("Cloning template...");
-		fs.rmSync(template, { recursive: true, force: true });
-		Bun.spawnSync(["git", "clone", "--depth", "1", templateRepo, template]);
-	} else {
-		console.log("Updating template...");
-		Bun.spawnSync(["git", "-C", template, "reset", "--hard"]);
-		Bun.spawnSync(["git", "-C", template, "pull"]);
-	}
+  if (!fs.exists(join(template, ".git"))) {
+    console.log("Cloning template...");
+    fs.rm(template);
+    git.clone(templateRepo, template);
+  } else {
+    console.log("Updating template...");
+    git.reset(template, { hard: true });
+    git.pull(template);
+  }
 
-	Bun.spawnSync([
-		"sh",
-		"-c",
-		`find "${dev}" -type f -name "*.md" -delete 2>/dev/null || true`,
-	]);
+  find.deleteByExt(dev, ".md");
+  rsync(template, dev, { delete: true, exclude: templateExcludes });
+  rsync(root, join(dev, "src"), { exclude: rootExcludes });
 
-	const templateExcludeArgs = templateExcludes
-		.map((e) => `--exclude="${e}"`)
-		.join(" ");
+  sync();
 
-	const rootExcludeArgs = rootExcludes.map((e) => `--exclude="${e}"`).join(" ");
+  if (!fs.exists(join(dev, "node_modules"))) {
+    console.log("Installing dependencies...");
+    bun.install(dev);
+  }
 
-	Bun.spawnSync([
-		"sh",
-		"-c",
-		`rsync -r --delete ${templateExcludeArgs} "${template}/" "${dev}/"`,
-	]);
-	Bun.spawnSync([
-		"sh",
-		"-c",
-		`rsync -r ${rootExcludeArgs} "${root}/" "${dev}/src/"`,
-	]);
+  fs.rm(join(dev, "_site"));
+  console.log("Build ready.");
+};
 
-	sync();
-
-	const nodeModulesPath = path.join(dev, "node_modules");
-	const bunTagPath = path.join(dev, "node_modules", ".bun-tag");
-
-	// Install if node_modules doesn't exist or wasn't created by bun
-	if (!fs.existsSync(nodeModulesPath) || !fs.existsSync(bunTagPath)) {
-		console.log("Installing dependencies...");
-		Bun.spawnSync(["bun", "install"], {
-			cwd: dev,
-			stdio: ["inherit", "inherit", "inherit"],
-		});
-	}
-
-	fs.rmSync(path.join(dev, "_site"), { recursive: true, force: true });
-	console.log("Build ready.");
-}
-
-export function sync() {
-	const excludes = rootExcludes.map((e) => `--exclude="${e}"`).join(" ");
-
-	const cmd = [
-		"rsync -ru",
-		excludes,
-		'--include="*/"',
-		'--include="**/*.md"',
-		'--include="**/*.scss"',
-		'--exclude="*"',
-		`"${root}/"`,
-		`"${dev}/src/"`,
-	].join(" ");
-
-	Bun.spawnSync(["sh", "-c", cmd]);
-}
+export const sync = () => {
+  rsync(root, join(dev, "src"), {
+    update: true,
+    exclude: rootExcludes,
+    include: ["*/", "**/*.md", "**/*.scss"],
+  });
+};
 
 if (import.meta.main) prep();
