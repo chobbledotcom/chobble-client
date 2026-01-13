@@ -133,13 +133,6 @@ const takeScreenshots = async (tempDir, opts) => {
     // Dynamically import playwright
     const { chromium } = await import("playwright");
 
-    const browserArgs = [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-gpu",
-    ];
-
     const viewportsToCapture = allViewports
       ? Object.keys(VIEWPORTS)
       : [viewport];
@@ -155,21 +148,25 @@ const takeScreenshots = async (tempDir, opts) => {
 
         console.log(`Taking screenshot of ${url} (${vp})...`);
 
-        // Launch fresh browser for each screenshot for stability
         let browser;
         try {
-          browser = await chromium.launch({ args: browserArgs });
-          const page = await browser.newPage({
-            viewport: { width, height },
+          browser = await chromium.launch({
+            args: [
+              "--no-sandbox",
+              "--disable-setuid-sandbox",
+              "--disable-dev-shm-usage",
+              "--disable-accelerated-2d-canvas",
+              "--no-first-run",
+              "--no-zygote",
+              "--disable-gpu",
+            ],
           });
+          const page = await browser.newPage({ viewport: { width, height } });
 
           await page.goto(url, {
-            waitUntil: "domcontentloaded",
+            waitUntil: "load",
             timeout,
           });
-
-          // Wait a bit for any animations/images to load
-          await page.waitForTimeout(500);
 
           await page.screenshot({
             path: outputPath,

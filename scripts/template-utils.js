@@ -46,6 +46,25 @@ const copyDir = (src, dest, excludes = []) => {
 };
 
 /**
+ * Recursively delete all files with a given extension
+ */
+const deleteByExt = (dir, ext) => {
+  if (!existsSync(dir)) return;
+
+  const entries = readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      deleteByExt(fullPath, ext);
+    } else if (entry.name.endsWith(ext)) {
+      fs.rm(fullPath);
+    }
+  }
+};
+
+/**
  * Creates a temporary directory for template operations
  * @param {string} prefix - Prefix for the temp directory name
  * @returns {string} Path to the created temp directory
@@ -87,8 +106,14 @@ export const installDeps = (dir) => {
  */
 export const mergeSiteContent = (templateDir) => {
   console.log("Merging site content...");
+
+  // First, delete template's .md files so our content replaces them
+  const srcDir = join(templateDir, "src");
+  deleteByExt(srcDir, ".md");
+
+  // Copy our site content (including .md files)
   const root = path();
-  copyDir(root, join(templateDir, "src"), rootExcludes);
+  copyDir(root, srcDir, rootExcludes);
 };
 
 /**
