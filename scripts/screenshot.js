@@ -90,7 +90,7 @@ const buildSite = (tempDir) => {
 
 const startServer = (siteDir, port = 8080) => {
   console.log(`Starting server for ${siteDir} on port ${port}...`);
-  const proc = Bun.spawn(["bun", "-e", `Bun.serve({port:${port},fetch(req){const url=new URL(req.url);let path=url.pathname;if(path.endsWith('/'))path+='index.html';return new Response(Bun.file('${siteDir}'+path))}})`], {
+  const proc = Bun.spawn(["bun", "-e", `Bun.serve({port:${port},fetch(req){const url=new URL(req.url);let p=url.pathname;if(p.endsWith('/'))p+='index.html';return new Response(Bun.file('${siteDir}'+p))}})`], {
     stdio: ["ignore", "pipe", "pipe"],
   });
   return proc;
@@ -120,7 +120,6 @@ const takeScreenshots = async (tempDir, opts) => {
 
   fs.mkdir(output);
 
-  // Start server
   const server = startServer(siteDir, port);
 
   try {
@@ -130,7 +129,6 @@ const takeScreenshots = async (tempDir, opts) => {
     }
     console.log(`Server running at ${baseUrl}`);
 
-    // Dynamically import playwright
     const { chromium } = await import("playwright");
 
     const viewportsToCapture = allViewports
@@ -151,27 +149,12 @@ const takeScreenshots = async (tempDir, opts) => {
         let browser;
         try {
           browser = await chromium.launch({
-            args: [
-              "--no-sandbox",
-              "--disable-setuid-sandbox",
-              "--disable-dev-shm-usage",
-              "--disable-accelerated-2d-canvas",
-              "--no-first-run",
-              "--no-zygote",
-              "--disable-gpu",
-            ],
+            args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--no-zygote"],
           });
           const page = await browser.newPage({ viewport: { width, height } });
 
-          await page.goto(url, {
-            waitUntil: "load",
-            timeout,
-          });
-
-          await page.screenshot({
-            path: outputPath,
-            fullPage: vp === "full-page",
-          });
+          await page.goto(url, { waitUntil: "load", timeout });
+          await page.screenshot({ path: outputPath, fullPage: vp === "full-page" });
 
           console.log(`  ✓ Saved ${filename}`);
           count++;
