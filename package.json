@@ -16,8 +16,5 @@
 		"screenshot": "bun scripts/screenshot.js",
 		"clean": "rm -rf .build _site",
 		"test": "bun scripts/test.js"
-	},
-	"devDependencies": {
-		"playwright": "^1.57.0"
 	}
 }

@@ -24,61 +24,6 @@ Examples:
 Page paths should start with / (e.g., /, /about, /products/item-1)
 `;
 
-const VIEWPORTS = {
-  mobile: { width: 375, height: 667 },
-  tablet: { width: 768, height: 1024 },
-  desktop: { width: 1280, height: 800 },
-  "full-page": { width: 1280, height: 4000 },
-};
-
-const parseArgs = (args) => {
-  const opts = {
-    pages: [],
-    viewport: "desktop",
-    allViewports: false,
-    output: path("screenshots"),
-    timeout: 10000,
-  };
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    switch (arg) {
-      case "-v":
-      case "--viewport":
-        opts.viewport = args[++i];
-        break;
-      case "-a":
-      case "--all-viewports":
-        opts.allViewports = true;
-        break;
-      case "-o":
-      case "--output":
-        opts.output = args[++i];
-        break;
-      case "-t":
-      case "--timeout":
-        opts.timeout = parseInt(args[++i], 10);
-        break;
-      case "-h":
-      case "--help":
-        console.log(USAGE);
-        process.exit(0);
-      default:
-        if (arg.startsWith("-")) {
-          console.error(`Unknown option: ${arg}`);
-          process.exit(1);
-        }
-        opts.pages.push(arg);
-    }
-  }
-
-  if (opts.pages.length === 0) {
-    opts.pages.push("/");
-  }
-
-  return opts;
-};
-
 const buildSite = (tempDir) => {
   console.log("Building site...");
   const result = bun.run("build", tempDir);
@@ -88,87 +33,54 @@ const buildSite = (tempDir) => {
   console.log("Build complete.");
 };
 
-const startServer = (siteDir, port = 8080) => {
-  console.log(`Starting server for ${siteDir} on port ${port}...`);
-  const proc = Bun.spawn(["bun", "-e", `Bun.serve({port:${port},fetch(req){const url=new URL(req.url);let p=url.pathname;if(p.endsWith('/'))p+='index.html';return new Response(Bun.file('${siteDir}'+p))}})`], {
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  return proc;
-};
-
-const waitForServer = async (url, maxAttempts = 20) => {
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      const res = await fetch(url);
-      if (res.ok) return true;
-    } catch {
-      // Server not ready yet
-    }
-    await Bun.sleep(250);
-  }
-  return false;
-};
-
-const sanitizePagePath = (pagePath) =>
-  pagePath === "/" ? "index" : pagePath.replace(/^\/|\/$/g, "").replace(/\//g, "-");
-
-const takeScreenshots = async (tempDir, opts) => {
-  const { pages, viewport, allViewports, output, timeout } = opts;
+const runScreenshots = async (tempDir, args) => {
   const siteDir = join(tempDir, "_site");
-  const port = 8765;
-  const baseUrl = `http://localhost:${port}`;
 
-  fs.mkdir(output);
+  // Determine output directory and ensure it exists
+  let outputDir = path("screenshots");
+  const outputIdx = args.findIndex(a => a === "-o" || a === "--output");
+  if (outputIdx !== -1 && args[outputIdx + 1]) {
+    const outputPath = args[outputIdx + 1];
+    outputDir = outputPath.startsWith("/") ? outputPath : path(outputPath);
+  }
+  fs.mkdir(outputDir);
 
-  const server = startServer(siteDir, port);
+  // Build args for template's screenshot script
+  const scriptArgs = ["-s", siteDir];
 
-  try {
-    const serverReady = await waitForServer(baseUrl);
-    if (!serverReady) {
-      throw new Error("Server failed to start");
+  // Pass through all args, but remap output to absolute path if relative
+  let i = 0;
+  while (i < args.length) {
+    const arg = args[i];
+    if (arg === "-o" || arg === "--output") {
+      scriptArgs.push("-o", outputDir);
+      i++; // Skip the value we already handled
+    } else {
+      scriptArgs.push(arg);
     }
-    console.log(`Server running at ${baseUrl}`);
+    i++;
+  }
 
-    const { chromium } = await import("playwright");
+  // Default output if not specified
+  if (!args.includes("-o") && !args.includes("--output")) {
+    scriptArgs.push("-o", outputDir);
+  }
 
-    const viewportsToCapture = allViewports
-      ? Object.keys(VIEWPORTS)
-      : [viewport];
+  // Default to homepage if no pages specified
+  const hasPages = args.some(a => a.startsWith("/"));
+  if (!hasPages) {
+    scriptArgs.push("/");
+  }
 
-    let count = 0;
+  console.log("Taking screenshots...");
+  const proc = Bun.spawn(["bun", "scripts/screenshot.js", ...scriptArgs], {
+    cwd: tempDir,
+    stdio: ["inherit", "inherit", "inherit"],
+  });
 
-    for (const pagePath of pages) {
-      for (const vp of viewportsToCapture) {
-        const { width, height } = VIEWPORTS[vp];
-        const url = `${baseUrl}${pagePath}`;
-        const filename = `${sanitizePagePath(pagePath)}-${vp}.png`;
-        const outputPath = join(output, filename);
-
-        console.log(`Taking screenshot of ${url} (${vp})...`);
-
-        let browser;
-        try {
-          browser = await chromium.launch({
-            args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage", "--disable-gpu", "--no-zygote"],
-          });
-          const page = await browser.newPage({ viewport: { width, height } });
-
-          await page.goto(url, { waitUntil: "load", timeout });
-          await page.screenshot({ path: outputPath, fullPage: vp === "full-page" });
-
-          console.log(`  ✓ Saved ${filename}`);
-          count++;
-        } catch (err) {
-          console.error(`  ✗ Failed to capture ${pagePath} (${vp}): ${err.message}`);
-        } finally {
-          if (browser) await browser.close();
-        }
-      }
-    }
-
-    console.log(`\nSaved ${count} screenshot(s) to ${output}`);
-  } finally {
-    server.kill();
+  const code = await proc.exited;
+  if (code !== 0) {
+    throw new Error(`Screenshot process exited with code ${code}`);
   }
 };
 
@@ -180,14 +92,12 @@ const main = async () => {
     return;
   }
 
-  const opts = parseArgs(args);
-
   console.log("Setting up template environment...");
   const { tempDir, cleanup } = await setupTemplate();
 
   try {
     buildSite(tempDir);
-    await takeScreenshots(tempDir, opts);
+    await runScreenshots(tempDir, args);
   } finally {
     cleanup();
   }
