@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { readdirSync, cpSync } from "node:fs";
 import { fs, bun, path } from "./utils.js";
 import { setupTemplate } from "./template-utils.js";
 
@@ -34,18 +35,18 @@ const buildSite = (tempDir) => {
 
 const runScreenshots = async (tempDir, args) => {
   const siteDir = join(tempDir, "_site");
+  const tempOutputDir = join(tempDir, "screenshots");
 
-  // Determine output directory and ensure it exists
-  let outputDir = path("screenshots");
+  // Determine final output directory
+  let finalOutputDir = path("screenshots");
   const outputIdx = args.findIndex(a => a === "-d" || a === "--output-dir");
   if (outputIdx !== -1 && args[outputIdx + 1]) {
     const outputPath = args[outputIdx + 1];
-    outputDir = outputPath.startsWith("/") ? outputPath : path(outputPath);
+    finalOutputDir = outputPath.startsWith("/") ? outputPath : path(outputPath);
   }
-  fs.mkdir(outputDir);
 
-  // Build args for template's screenshot script
-  const scriptArgs = ["-s", siteDir, "-d", outputDir];
+  // Build args for template's screenshot script (using relative path within temp dir)
+  const scriptArgs = ["-s", siteDir, "-d", "screenshots"];
 
   // Pass through relevant args
   for (let i = 0; i < args.length; i++) {
@@ -77,6 +78,14 @@ const runScreenshots = async (tempDir, args) => {
   if (code !== 0) {
     throw new Error(`Screenshot process exited with code ${code}`);
   }
+
+  // Copy screenshots to final output directory
+  fs.mkdir(finalOutputDir);
+  const files = readdirSync(tempOutputDir);
+  for (const file of files) {
+    cpSync(join(tempOutputDir, file), join(finalOutputDir, file));
+  }
+  console.log(`Screenshots saved to ${finalOutputDir}`);
 };
 
 const main = async () => {
