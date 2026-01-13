@@ -10,8 +10,7 @@ Take screenshots of your site pages.
 Options:
   -v, --viewport <name>   Viewport to use: mobile, tablet, desktop, full-page (default: desktop)
   -a, --all-viewports     Capture all viewport variants for each page
-  -o, --output <dir>      Output directory (default: ./screenshots)
-  -t, --timeout <ms>      Navigation timeout in milliseconds (default: 10000)
+  -d, --output-dir <dir>  Output directory (default: ./screenshots)
   -h, --help              Show this help message
 
 Examples:
@@ -19,7 +18,7 @@ Examples:
   bun run screenshot /about /contact           # Screenshot multiple pages
   bun run screenshot -a /                      # Screenshot homepage at all viewports
   bun run screenshot -v mobile /products       # Screenshot products page at mobile viewport
-  bun run screenshot -o ./my-screenshots /     # Save to custom directory
+  bun run screenshot -d ./my-screenshots /     # Save to custom directory
 
 Page paths should start with / (e.g., /, /about, /products/item-1)
 `;
@@ -38,7 +37,7 @@ const runScreenshots = async (tempDir, args) => {
 
   // Determine output directory and ensure it exists
   let outputDir = path("screenshots");
-  const outputIdx = args.findIndex(a => a === "-o" || a === "--output");
+  const outputIdx = args.findIndex(a => a === "-d" || a === "--output-dir");
   if (outputIdx !== -1 && args[outputIdx + 1]) {
     const outputPath = args[outputIdx + 1];
     outputDir = outputPath.startsWith("/") ? outputPath : path(outputPath);
@@ -46,24 +45,20 @@ const runScreenshots = async (tempDir, args) => {
   fs.mkdir(outputDir);
 
   // Build args for template's screenshot script
-  const scriptArgs = ["-s", siteDir];
+  const scriptArgs = ["-s", siteDir, "-d", outputDir];
 
-  // Pass through all args, but remap output to absolute path if relative
-  let i = 0;
-  while (i < args.length) {
+  // Pass through relevant args
+  for (let i = 0; i < args.length; i++) {
     const arg = args[i];
-    if (arg === "-o" || arg === "--output") {
-      scriptArgs.push("-o", outputDir);
-      i++; // Skip the value we already handled
-    } else {
+    if (arg === "-d" || arg === "--output-dir") {
+      i++; // Skip, already handled
+    } else if (arg === "-v" || arg === "--viewport") {
+      scriptArgs.push("-v", args[++i]);
+    } else if (arg === "-a" || arg === "--all-viewports") {
+      scriptArgs.push("-a");
+    } else if (arg.startsWith("/")) {
       scriptArgs.push(arg);
     }
-    i++;
-  }
-
-  // Default output if not specified
-  if (!args.includes("-o") && !args.includes("--output")) {
-    scriptArgs.push("-o", outputDir);
   }
 
   // Default to homepage if no pages specified
