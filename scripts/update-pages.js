@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { setupTemplate } from "./template-utils.js";
-import { bun, exists, path, read, write } from "./utils.js";
+import { bun, exists, fs, path, read, write } from "./utils.js";
 
 const TEMPLATE_RAW_URL =
   "https://raw.githubusercontent.com/chobbledotcom/chobble-template/refs/heads/main/.pages.yml";
@@ -19,6 +19,12 @@ const customisePages = async () => {
   const { tempDir, cleanup } = await setupTemplate({ mergeSite: false });
 
   try {
+    // Remove template's page-layouts to avoid interference with customisation
+    // (but keep an empty directory so pageLayouts.js doesn't fail)
+    const templatePageLayouts = join(tempDir, "src", "_data", "page-layouts");
+    fs.rm(templatePageLayouts);
+    fs.mkdir(templatePageLayouts);
+
     // Copy local site.json and .pages.yml to the template so customise-cms uses them as defaults
     const localSiteJson = path("_data", "site.json");
     const localPagesYml = path(".pages.yml");
