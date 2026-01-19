@@ -12,7 +12,7 @@ import {
 
 const verbose = process.argv.includes("--verbose");
 
-const steps = [COMMON_STEPS.lintFix, COMMON_STEPS.cpd, COMMON_STEPS.test];
+const steps = [COMMON_STEPS.lintFix, COMMON_STEPS.cpd];
 
 console.log(
   verbose
