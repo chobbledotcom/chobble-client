@@ -16,8 +16,9 @@
 		"screenshot": "bun scripts/screenshot.js",
 		"clean": "rm -rf .build _site",
 		"test": "bun scripts/test.js",
-		"lint": "bunx @biomejs/biome check --error-on-warnings .",
-		"lint:fix": "bunx @biomejs/biome check --write .",
+		"precommit": "bun scripts/precommit.js",
+		"lint": "bunx @biomejs/biome check --config-path=biome.json --error-on-warnings scripts/",
+		"lint:fix": "bunx @biomejs/biome check --config-path=biome.json --write scripts/",
 		"cpd": "bunx jscpd"
 	},
 	"imports": {
