@@ -18,14 +18,13 @@
 		"test": "bun scripts/test.js",
 		"lint": "bunx @biomejs/biome check --error-on-warnings .",
 		"lint:fix": "bunx @biomejs/biome check --write .",
-		"cpd": "jscpd"
+		"cpd": "bunx jscpd"
 	},
 	"imports": {
 		"#fp": "@chobble/js-toolkit/fp",
 		"#fp/*": "@chobble/js-toolkit/fp/*"
 	},
 	"devDependencies": {
-		"@chobble/js-toolkit": "git+https://git.chobble.com/chobble/chobble-template.git#main&path=packages/js-toolkit",
-		"jscpd": "^4.0.5"
+		"@chobble/js-toolkit": "file:./chobble-template/packages/js-toolkit"
 	}
 }
