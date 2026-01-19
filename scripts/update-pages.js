@@ -20,8 +20,10 @@ const customisePages = async () => {
 
   try {
     // Remove template's page-layouts to avoid interference with customisation
+    // (but keep an empty directory so pageLayouts.js doesn't fail)
     const templatePageLayouts = join(tempDir, "src", "_data", "page-layouts");
     fs.rm(templatePageLayouts);
+    fs.mkdir(templatePageLayouts);
 
     // Copy local site.json and .pages.yml to the template so customise-cms uses them as defaults
     const localSiteJson = path("_data", "site.json");
