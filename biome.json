@@ -1,6 +1,6 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.11/schema.json",
-  "extends": ["./packages/js-toolkit/configs/biome.base.json"],
+  "extends": ["./node_modules/@chobble/js-toolkit/configs/biome.base.json"],
   "files": {
     "includes": ["scripts/**/*.js"],
     "ignoreUnknown": true
