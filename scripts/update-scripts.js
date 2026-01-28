@@ -9,7 +9,7 @@
 import { $ } from "bun";
 import { mkdtemp, rm } from "fs/promises";
 import { tmpdir } from "os";
-import { join, dirname } from "path";
+import { dirname, join } from "path";
 
 const REPO_URL = "https://github.com/chobbledotcom/chobble-client.git";
 const SCRIPT_DIR = dirname(import.meta.path);
