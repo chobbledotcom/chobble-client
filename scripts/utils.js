@@ -1,4 +1,5 @@
 import {
+  chmodSync,
   cpSync,
   existsSync,
   mkdirSync,
@@ -84,6 +85,7 @@ const copyRecursive = (src, dest, excludes, update) => {
       copyRecursive(srcPath, destPath, excludes, update);
     } else if (shouldCopy(srcPath, destPath, update)) {
       cpSync(srcPath, destPath);
+      chmodSync(destPath, statSync(srcPath).mode);
     }
   }
 };
