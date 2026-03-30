@@ -37,31 +37,11 @@ jobs:
             packages
             src
 
-      - name: Copy template files to combined dir
-        run: |
-          mkdir -p combined
-          rsync \
-            --recursive \
-            --verbose \
-            --delete \
-            --exclude=".git" \
-            --exclude="*.md" \
-            --exclude="images" \
-            --exclude="landing-pages/*.html" \
-            template/ \
-            combined/
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Overlay our repo files into combined src
-        run: |
-          rsync \
-            --recursive \
-            --verbose \
-            --exclude=".*" \
-            --exclude="README.md" \
-            --exclude="package.json" \
-            --exclude="bun.lock" \
-            source/ \
-            combined/src/
+      - name: Merge repos
+        run: bun source/scripts/ci-merge.js template source combined
 
       - name: Update site.json with secrets
         run: |
