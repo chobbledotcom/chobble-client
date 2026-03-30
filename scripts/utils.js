@@ -62,7 +62,11 @@ export const git = {
 // Directory sync (replaces rsync)
 const globToRegex = (pattern) => {
   const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^${escaped.replace(/\*/g, ".*")}$`);
+  const globs = escaped
+    .replaceAll("**", "\0")
+    .replaceAll("*", "[^/]*")
+    .replaceAll("\0", ".*");
+  return new RegExp(`^${globs}$`);
 };
 
 const isExcluded = (name, relPath, excludes) =>
