@@ -44,10 +44,10 @@ const fetchPosts = async (profileUrl) => {
   return results
     .filter((p) => p.timestamp && p.displayUrl && p.url)
     .map((p) => ({
-      timestamp: p.timestamp,
-      caption: p.caption || "",
+      date: p.timestamp,
+      title: p.caption || "",
       url: p.url,
-      image: p.displayUrl,
+      thumbnail: p.displayUrl,
     }));
 };
 
@@ -58,19 +58,19 @@ const downloadImage = async (imageUrl, filepath) => {
 };
 
 const savePost = async (post) => {
-  const slug = formatTimestamp(post.timestamp);
+  const slug = formatTimestamp(post.date);
   const jsonPath = join(CONFIG.postsDir, `${slug}.json`);
   const imagePath = join(CONFIG.imagesDir, `${slug}.jpg`);
 
   if (await exists(jsonPath)) return false;
 
-  await downloadImage(post.image, imagePath);
+  await downloadImage(post.thumbnail, imagePath);
 
   const record = {
-    timestamp: post.timestamp,
-    caption: post.caption,
+    thumbnail: `/images/instagram-posts/${slug}.jpg`,
+    title: post.title,
+    date: post.date,
     url: post.url,
-    image: `/images/instagram-posts/${slug}.jpg`,
   };
 
   await write(jsonPath, `${JSON.stringify(record, null, 2)}\n`);
