@@ -8,7 +8,7 @@ on:
 
 jobs:
   fetch-posts:
-    runs-on: ubuntu-latest
+    runs-on: ubicloud-standard-8
     permissions:
       contents: write
 
