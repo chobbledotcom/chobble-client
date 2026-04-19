@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { sourceExcludes, templateExcludes } from "./consts.js";
 import { fs, mergeTemplateAndSource } from "./utils.js";
 
 const [templateDir, sourceDir, combinedDir] = process.argv.slice(2);
@@ -18,8 +19,8 @@ console.log(`Merging template and source into ${combined}...`);
 fs.mkdir(combined);
 mergeTemplateAndSource(template, source, combined, {
   delete: true,
-  templateExcludes: [".git", "*.md", "images", "landing-pages/*.html"],
-  sourceExcludes: [".*", "README.md", "package.json", "bun.lock"],
+  templateExcludes,
+  sourceExcludes,
 });
 
 console.log("Merge complete.");

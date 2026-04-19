@@ -1,5 +1,10 @@
 import { join } from "node:path";
-import { buildDir, templateRepo } from "./consts.js";
+import {
+  buildDir,
+  sourceExcludes,
+  templateExcludes,
+  templateRepo,
+} from "./consts.js";
 import {
   bun,
   copyDir,
@@ -15,31 +20,6 @@ const build = path(buildDir);
 const template = path(buildDir, "template");
 const dev = path(buildDir, "dev");
 const localTemplate = join(root, "..", "chobble-template");
-
-const templateExcludes = [
-  ".git",
-  ".direnv",
-  "node_modules",
-  "*.md",
-  "test",
-  "test-*",
-  ".image-cache",
-  "landing-pages",
-  "instagram-posts",
-];
-const rootExcludes = [
-  ".git",
-  ".direnv",
-  "*.nix",
-  "README.md",
-  buildDir,
-  "scripts",
-  "node_modules",
-  "package*.json",
-  "bun.lock",
-  "old_site",
-  ...(process.env.PLACEHOLDER_IMAGES === "1" ? ["images"] : []),
-];
 
 export const prep = () => {
   console.log("Preparing build...");
@@ -65,7 +45,7 @@ export const prep = () => {
   mergeTemplateAndSource(template, root, dev, {
     delete: true,
     templateExcludes,
-    sourceExcludes: rootExcludes,
+    sourceExcludes,
   });
 
   sync();
@@ -82,7 +62,7 @@ export const prep = () => {
 export const sync = () => {
   copyDir(root, join(dev, "src"), {
     update: true,
-    exclude: rootExcludes,
+    exclude: sourceExcludes,
   });
 };
 
