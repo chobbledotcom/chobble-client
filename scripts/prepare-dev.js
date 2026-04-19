@@ -1,6 +1,15 @@
 import { join } from "node:path";
 import { buildDir, templateRepo } from "./consts.js";
-import { bun, copyDir, find, fs, git, path, root } from "./utils.js";
+import {
+  bun,
+  copyDir,
+  find,
+  fs,
+  git,
+  mergeTemplateAndSource,
+  path,
+  root,
+} from "./utils.js";
 
 const build = path(buildDir);
 const template = path(buildDir, "template");
@@ -53,8 +62,11 @@ export const prep = () => {
   }
 
   find.deleteByExt(dev, ".md");
-  copyDir(template, dev, { delete: true, exclude: templateExcludes });
-  copyDir(root, join(dev, "src"), { exclude: rootExcludes });
+  mergeTemplateAndSource(template, root, dev, {
+    delete: true,
+    templateExcludes,
+    sourceExcludes: rootExcludes,
+  });
 
   sync();
 

@@ -130,6 +130,17 @@ export const copyDir = (src, dest, opts = {}) => {
   copyRecursive(src, dest, excludes, opts.update || false);
 };
 
+export const mergeTemplateAndSource = (template, source, dest, opts = {}) => {
+  copyDir(template, dest, {
+    delete: opts.delete,
+    exclude: opts.templateExcludes || [],
+  });
+  copyDir(source, join(dest, "src"), {
+    update: opts.update,
+    exclude: opts.sourceExcludes || [],
+  });
+};
+
 // Bun commands
 export const bun = {
   install: (cwd) => run(["bun", "install"], { cwd }),

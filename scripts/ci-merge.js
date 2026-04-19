@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { copyDir, fs } from "./utils.js";
+import { fs, mergeTemplateAndSource } from "./utils.js";
 
 const [templateDir, sourceDir, combinedDir] = process.argv.slice(2);
 
@@ -14,16 +14,12 @@ const template = resolve(templateDir);
 const source = resolve(sourceDir);
 const combined = resolve(combinedDir);
 
-console.log(`Copying template files to ${combined}...`);
+console.log(`Merging template and source into ${combined}...`);
 fs.mkdir(combined);
-copyDir(template, combined, {
+mergeTemplateAndSource(template, source, combined, {
   delete: true,
-  exclude: [".git", "*.md", "images", "landing-pages/*.html"],
-});
-
-console.log(`Overlaying source files into ${combined}/src...`);
-copyDir(source, resolve(combined, "src"), {
-  exclude: [".*", "README.md", "package.json", "bun.lock"],
+  templateExcludes: [".git", "*.md", "images", "landing-pages/*.html"],
+  sourceExcludes: [".*", "README.md", "package.json", "bun.lock"],
 });
 
 console.log("Merge complete.");
