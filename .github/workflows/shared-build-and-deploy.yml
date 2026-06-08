@@ -129,7 +129,7 @@ jobs:
 
       - name: Deploy to Bunny
         if: inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main'
-        uses: R-J-dev/bunny-deploy@v2.0.6
+        uses: R-J-dev/bunny-deploy@v2.1.1
         with:
           access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
           directory-to-upload: _site
