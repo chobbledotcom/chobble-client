@@ -15,10 +15,6 @@ on:
         description: 'Bunny CDN storage endpoint'
         type: string
         default: 'https://storage.bunnycdn.com'
-      bunny-concurrency:
-        description: 'Bunny CDN deploy concurrency'
-        type: string
-        default: '5'
       replication-timeout:
         description: 'Bunny CDN replication timeout'
         type: string
@@ -140,7 +136,7 @@ jobs:
           storage-endpoint: "${{ inputs.bunny-storage-endpoint }}"
           storage-zone-name: ${{ steps.deployment_env.outputs.storage_zone_name }}
           storage-zone-password: ${{ steps.deployment_env.outputs.storage_zone_password }}
-          concurrency: "${{ inputs.bunny-concurrency }}"
+          concurrency: "10"
           enable-delete-action: true
           enable-purge-pull-zone: true
           pull-zone-id: ${{ steps.deployment_env.outputs.pull_zone_id_deploy }}
