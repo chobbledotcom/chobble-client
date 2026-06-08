@@ -1,17 +1,56 @@
-name: Build and Deploy
+name: Shared Build and Deploy
 
 on:
-  push:
-  workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: false
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'Runner label'
+        type: string
+        default: 'ubicloud-standard-8'
+      deploy-only-on-main:
+        description: 'Only deploy on main branch (no staging)'
+        type: boolean
+        default: false
+      bunny-storage-endpoint:
+        description: 'Bunny CDN storage endpoint'
+        type: string
+        default: 'https://storage.bunnycdn.com'
+      bunny-concurrency:
+        description: 'Bunny CDN deploy concurrency'
+        type: string
+        default: '5'
+      replication-timeout:
+        description: 'Bunny CDN replication timeout'
+        type: string
+        default: '15000'
+    secrets:
+      INDEXNOW_KEY:
+        required: false
+      FORMSPARK_ID:
+        required: false
+      BOTPOISON_PUBLIC_KEY:
+        required: false
+      BUNNY_ACCESS_KEY:
+        required: false
+      BUNNY_PRODUCTION_STORAGE_ZONE_NAME:
+        required: false
+      BUNNY_PRODUCTION_STORAGE_ZONE_PASSWORD:
+        required: false
+      BUNNY_PRODUCTION_PULL_ZONE_ID:
+        required: false
+      BUNNY_STAGING_STORAGE_ZONE_NAME:
+        required: false
+      BUNNY_STAGING_STORAGE_ZONE_PASSWORD:
+        required: false
+      BUNNY_STAGING_PULL_ZONE_ID:
+        required: false
+      NTFY_TOPIC:
+        required: false
 
 jobs:
   build:
     name: Build and Deploy
-    runs-on: ubicloud-standard-8
+    runs-on: ${{ inputs.runs-on }}
     env:
       INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
@@ -93,18 +132,19 @@ jobs:
           fi
 
       - name: Deploy to Bunny
+        if: inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main'
         uses: R-J-dev/bunny-deploy@v2.0.6
         with:
           access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
           directory-to-upload: _site
-          storage-endpoint: "https://storage.bunnycdn.com"
+          storage-endpoint: "${{ inputs.bunny-storage-endpoint }}"
           storage-zone-name: ${{ steps.deployment_env.outputs.storage_zone_name }}
           storage-zone-password: ${{ steps.deployment_env.outputs.storage_zone_password }}
-          concurrency: "5"
+          concurrency: "${{ inputs.bunny-concurrency }}"
           enable-delete-action: true
           enable-purge-pull-zone: true
           pull-zone-id: ${{ steps.deployment_env.outputs.pull_zone_id_deploy }}
-          replication-timeout: "15000"
+          replication-timeout: "${{ inputs.replication-timeout }}"
 
       - name: Get site URL
         id: site-url
@@ -119,7 +159,7 @@ jobs:
 
   notify-failure:
     name: Notify on Failure
-    runs-on: ubicloud-standard-8
+    runs-on: ${{ inputs.runs-on }}
     needs: [build]
     if: failure()
     steps:
