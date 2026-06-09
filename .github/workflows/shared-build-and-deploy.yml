@@ -153,7 +153,7 @@ jobs:
           sitemap-location: "${{ steps.site-url.outputs.url }}/sitemap.xml"
           key: ${{ secrets.INDEXNOW_KEY }}
           since: 10
-          since-units: minute
+          since-unit: minute
 
   notify-failure:
     name: Notify on Failure
