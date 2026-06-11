@@ -6,7 +6,7 @@ on:
       runs-on:
         description: 'Runner label'
         type: string
-        default: 'ubicloud-standard-8'
+        default: 'ubicloud-standard-16'
       deploy-only-on-main:
         description: 'Only deploy on main branch (no staging)'
         type: boolean
