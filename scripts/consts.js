@@ -17,7 +17,7 @@ export const templateExcludes = [
 export const sourceExcludes = [
   ".*",
   "*.nix",
-  "README.md",
+  "^*.md",
   "scripts",
   "node_modules",
   "package*.json",

@@ -69,9 +69,12 @@ const globToRegex = (pattern) => {
   return new RegExp(`^${globs}$`);
 };
 
-const isExcluded = (name, relPath, excludes) =>
+const isExcluded = (name, relPath, excludes, depth = 0) =>
   excludes.some((p) => {
-    const regex = globToRegex(p);
+    const isRootOnly = p.startsWith("^");
+    const pattern = isRootOnly ? p.slice(1) : p;
+    if (isRootOnly && depth > 0) return false;
+    const regex = globToRegex(pattern);
     return regex.test(name) || regex.test(relPath);
   });
 
@@ -89,37 +92,38 @@ const copyFile = (srcPath, destPath) => {
 
 const entryRelPath = (relBase, name) => (relBase ? `${relBase}/${name}` : name);
 
-const copyRecursive = (src, dest, excludes, update, relBase = "") => {
+const copyRecursive = (src, dest, excludes, update, relBase = "", depth = 0) => {
   mkdirSync(dest, { recursive: true });
   for (const entry of readdirSync(src, { withFileTypes: true })) {
     const relPath = entryRelPath(relBase, entry.name);
-    if (isExcluded(entry.name, relPath, excludes)) continue;
+    if (isExcluded(entry.name, relPath, excludes, depth)) continue;
     const srcPath = join(src, entry.name);
     const destPath = join(dest, entry.name);
     if (entry.isDirectory()) {
-      copyRecursive(srcPath, destPath, excludes, update, relPath);
+      copyRecursive(srcPath, destPath, excludes, update, relPath, depth + 1);
     } else if (shouldCopy(srcPath, destPath, update)) {
       copyFile(srcPath, destPath);
     }
   }
 };
 
-const removeIfMissing = (destPath, srcPath, relPath, excludes) => {
+const removeIfMissing = (destPath, srcPath, relPath, excludes, depth) => {
   if (!existsSync(srcPath)) rmSync(destPath, { recursive: true, force: true });
   else if (statSync(destPath).isDirectory())
-    deleteMissing(destPath, srcPath, relPath, excludes);
+    deleteMissing(destPath, srcPath, relPath, excludes, depth);
 };
 
-const deleteMissing = (dest, src, relBase, excludes) => {
+const deleteMissing = (dest, src, relBase, excludes, depth = 0) => {
   if (!existsSync(dest)) return;
   for (const entry of readdirSync(dest, { withFileTypes: true })) {
     const relPath = entryRelPath(relBase, entry.name);
-    if (isExcluded(entry.name, relPath, excludes)) continue;
+    if (isExcluded(entry.name, relPath, excludes, depth)) continue;
     removeIfMissing(
       join(dest, entry.name),
       join(src, entry.name),
       relPath,
       excludes,
+      depth + 1,
     );
   }
 };
