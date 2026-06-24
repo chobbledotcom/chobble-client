@@ -1,6 +1,8 @@
 ---
+name: Home
 permalink: "/"
-layout: "home.html"
+blocks:
+  - type: markdown
+    content: |
+      # Home
 ---
-
-# Home
