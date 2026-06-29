@@ -19,14 +19,29 @@ import {
 const build = path(buildDir);
 const template = path(buildDir, "template");
 const dev = path(buildDir, "dev");
-const localTemplate = join(root, "..", "chobble-template");
+
+// Prefer an already-checked-out template so local builds work offline and
+// skip a redundant network clone: a sibling clone (../chobble-template) or
+// the in-repo chobble-template submodule.
+const localTemplates = [
+  join(root, "..", "chobble-template"),
+  path("chobble-template"),
+];
+
+const resolveLocalTemplate = () => {
+  for (const dir of localTemplates) {
+    if (fs.exists(join(dir, ".eleventy.js"))) return dir;
+  }
+  return null;
+};
 
 export const prep = () => {
   console.log("Preparing build...");
   fs.mkdir(build);
 
-  if (fs.exists(localTemplate)) {
-    console.log("Using local template from ../chobble-template...");
+  const localTemplate = resolveLocalTemplate();
+  if (localTemplate) {
+    console.log(`Using local template from ${localTemplate}...`);
     copyDir(localTemplate, template, {
       delete: true,
       exclude: templateExcludes,
