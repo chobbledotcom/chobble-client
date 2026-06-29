@@ -18,8 +18,8 @@
 		"clean": "rm -rf .build _site",
 		"test": "bun scripts/test.js",
 		"precommit": "bun scripts/precommit.js",
-		"lint": "bunx @biomejs/biome check --config-path=biome.json --error-on-warnings scripts/",
-		"lint:fix": "bunx @biomejs/biome check --config-path=biome.json --write scripts/",
+		"lint": "bunx @biomejs/biome@2.3.11 check --config-path=biome.json --error-on-warnings scripts/",
+		"lint:fix": "bunx @biomejs/biome@2.3.11 check --config-path=biome.json --write scripts/",
 		"cpd": "bunx jscpd"
 	},
 	"imports": {

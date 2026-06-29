@@ -34,7 +34,7 @@ export const fs = {
 export const run = (cmd, opts = {}) =>
   Bun.spawnSync(cmd, { stdio: ["inherit", "inherit", "inherit"], ...opts });
 
-export const shell = (cmd, opts = {}) => run(["sh", "--", "-c", cmd], opts);
+export const shell = (cmd, opts = {}) => run(["sh", "-c", cmd], opts);
 
 export const spawn = (cmd, opts = {}) =>
   Bun.spawn(cmd, { stdio: ["inherit", "inherit", "inherit"], ...opts });
@@ -92,7 +92,14 @@ const copyFile = (srcPath, destPath) => {
 
 const entryRelPath = (relBase, name) => (relBase ? `${relBase}/${name}` : name);
 
-const copyRecursive = (src, dest, excludes, update, relBase = "", depth = 0) => {
+const copyRecursive = (
+  src,
+  dest,
+  excludes,
+  update,
+  relBase = "",
+  depth = 0,
+) => {
   mkdirSync(dest, { recursive: true });
   for (const entry of readdirSync(src, { withFileTypes: true })) {
     const relPath = entryRelPath(relBase, entry.name);
