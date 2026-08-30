@@ -51,13 +51,13 @@ jobs:
       INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
       - name: Checkout this repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           path: source
           fetch-depth: 0
 
       - name: Checkout Chobble Template
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: chobble-mirror/chobble-template
           ref: main
@@ -91,7 +91,7 @@ jobs:
             "combined/src/_data/config.json"
 
       - name: Restore cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             combined/node_modules
@@ -129,7 +129,7 @@ jobs:
 
       - name: Deploy to Bunny
         if: inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main'
-        uses: R-J-dev/bunny-deploy@v2.1.1
+        uses: R-J-dev/bunny-deploy@v3.0.0
         with:
           access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
           directory-to-upload: _site
