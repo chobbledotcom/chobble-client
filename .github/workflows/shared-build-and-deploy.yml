@@ -11,6 +11,10 @@ on:
         description: 'Only deploy on main branch (no staging)'
         type: boolean
         default: false
+      check-duplicated-code:
+        description: 'Run the site''s cpd checks before building'
+        type: boolean
+        default: false
     secrets:
       INDEXNOW_KEY:
         required: false
@@ -62,6 +66,13 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
+      - name: Check for duplicated code
+        if: inputs.check-duplicated-code
+        run: |
+          cd source
+          bun run cpd
+          bun run cpd:ratchet
+
       - name: Merge repos
         run: bun source/scripts/ci-merge.js template source combined
 
@@ -93,6 +104,15 @@ jobs:
           bun scripts/eleventy-build.js
           mkdir -p ../_site
           mv _site/* ../_site/
+
+      - name: Normalise paths and links
+        run: |
+          for script in fix-wp-paths fix-relative-paths fix-links; do
+            if [ -f "source/scripts/$script.js" ]; then
+              echo "Running $script.js"
+              bun "source/scripts/$script.js" _site
+            fi
+          done
 
       - name: Write IndexNow key file
         if: github.ref == 'refs/heads/main' && env.INDEXNOW_KEY != ''
