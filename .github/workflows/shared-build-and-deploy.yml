@@ -31,9 +31,6 @@ jobs:
   build:
     name: Build and Deploy
     runs-on: ${{ inputs.runs-on }}
-    permissions:
-      contents: read
-      deployments: write
     env:
       INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
@@ -111,7 +108,7 @@ jobs:
           fi
 
       - name: Deploy to Bunny CDN
-        if: (inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main') && steps.deployment_env.outputs.storage_zone_name != ''
+        if: steps.deployment_env.outputs.storage_zone_name != '' && (inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main')
         uses: BunnyWay/actions/deploy-site@deploy-site_0.1.1
         with:
           site: ${{ steps.deployment_env.outputs.storage_zone_name }}
