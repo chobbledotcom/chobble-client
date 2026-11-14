@@ -15,6 +15,10 @@ on:
         description: 'Run the site''s cpd checks before building'
         type: boolean
         default: false
+      template-ref:
+        description: 'Chobble Template commit to build with. Defaults to the last v1 commit, before v2 landed on main.'
+        type: string
+        default: '9a3d6b3f400018c1589ef9a2bebf56fe930980ce'
     secrets:
       INDEXNOW_KEY:
         required: false
@@ -48,7 +52,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: chobble-mirror/chobble-template
-          ref: main
+          ref: ${{ inputs.template-ref }}
           path: template
           sparse-checkout-cone-mode: false
           sparse-checkout: |
