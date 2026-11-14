@@ -19,6 +19,14 @@ on:
         description: 'Chobble Template commit to build with. Defaults to the last v1 commit, before v2 landed on main.'
         type: string
         default: '9a3d6b3f400018c1589ef9a2bebf56fe930980ce'
+      standalone:
+        description: 'Build the calling repo on its own with npm (a Chobble Template v2 site) instead of merging it over the v1 template'
+        type: boolean
+        default: false
+      ref:
+        description: 'Commit to build; the commit that started the run when empty'
+        type: string
+        default: ''
     secrets:
       INDEXNOW_KEY:
         required: false
@@ -45,10 +53,14 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v5
         with:
-          path: source
+          # A standalone site is the whole build, so it goes where the merged
+          # template and site would otherwise be assembled.
+          path: ${{ inputs.standalone && 'combined' || 'source' }}
+          ref: ${{ inputs.ref }}
           fetch-depth: 0
 
       - name: Checkout Chobble Template
+        if: ${{ !inputs.standalone }}
         uses: actions/checkout@v5
         with:
           repository: chobble-mirror/chobble-template
@@ -68,19 +80,28 @@ jobs:
             src
 
       - name: Setup Bun
+        if: ${{ !inputs.standalone }}
         uses: oven-sh/setup-bun@v2
 
+      - name: Setup Node
+        if: inputs.standalone
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Check for duplicated code
-        if: inputs.check-duplicated-code
+        if: ${{ inputs.check-duplicated-code && !inputs.standalone }}
         run: |
           cd source
           bun run cpd
           bun run cpd:ratchet
 
       - name: Merge repos
+        if: ${{ !inputs.standalone }}
         run: bun source/scripts/ci-merge.js template source combined
 
       - name: Update site.json with secrets
+        if: ${{ !inputs.standalone }}
         run: |
           sed -i \
             's/"formspark_id": null/"formspark_id": "${{ secrets.FORMSPARK_ID }}"/g' \
@@ -89,23 +110,50 @@ jobs:
             's/"botpoison_public_key": null/"botpoison_public_key": "${{ secrets.BOTPOISON_PUBLIC_KEY }}"/g' \
             "combined/src/_data/config.json"
 
+      # A v2 config.json lists only the settings a site has changed, so the
+      # form IDs are added as keys rather than swapped in for null values.
+      - name: Update config.json with secrets (standalone)
+        if: inputs.standalone
+        env:
+          FORMSPARK_ID: ${{ secrets.FORMSPARK_ID }}
+          BOTPOISON_PUBLIC_KEY: ${{ secrets.BOTPOISON_PUBLIC_KEY }}
+        run: |
+          jq --arg formspark "$FORMSPARK_ID" --arg botpoison "$BOTPOISON_PUBLIC_KEY" '
+            (if $formspark != "" then .formspark_id = $formspark else . end)
+            | (if $botpoison != "" then .botpoison_public_key = $botpoison else . end)
+          ' combined/src/_data/config.json > config.tmp.json
+          mv config.tmp.json combined/src/_data/config.json
+
       - name: Restore cache
         uses: actions/cache@v5
         with:
           path: |
             combined/node_modules
             combined/.image-cache
-          key: ${{ runner.os }}-bun-${{ hashFiles('combined/bun.lock') }}
+          key: ${{ runner.os }}-bun-${{ hashFiles('combined/bun.lock', 'combined/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-bun-
 
       - name: Build with Bun
+        if: ${{ !inputs.standalone }}
         env:
           GIT_DATES_REPO: ../source
         run: |
           cd combined
           bun install --frozen-lockfile
           bun scripts/eleventy-build.js
+          mkdir -p ../_site
+          mv _site/* ../_site/
+
+      # The repository's docs/ (the generated Site Builder Reference) publish
+      # alongside the site at /docs/.
+      - name: Build with npm (standalone)
+        if: inputs.standalone
+        run: |
+          cd combined
+          npm ci
+          npm run build
+          if [ -d docs ]; then cp -r docs _site/; fi
           mkdir -p ../_site
           mv _site/* ../_site/
 
