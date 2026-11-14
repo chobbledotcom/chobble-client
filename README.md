@@ -6,7 +6,7 @@ Quick static site generator that combines the [Chobble Template](https://git.cho
 
 1. **Add your content** - Edit markdown files and images in the relevant folders
 2. **Push to GitHub** - The site builds automatically via GitHub Actions
-3. **Deploy happens automatically** - Site deploys to Bunny CDN (staging for branches, production for `main`)
+3. **Deploy happens automatically** - `main` deploys to Bunny CDN; other branches just build, as a check
 
 ## What Goes Where
 
@@ -27,12 +27,12 @@ The `.pages.yml` defines all your content types:
 When you push to GitHub:
 1. GitHub Actions merges your content with the template
 2. Builds the static site with Eleventy
-3. Deploys to Bunny CDN
+3. Deploys to Bunny CDN, from `main` only
 
 ## Configuration
 
 Set these GitHub secrets for your repo:
-- `BUNNY_ACCESS_KEY`, `BUNNY_PRODUCTION_*` / `BUNNY_STAGING_*` (storage zone name, password, pull zone ID) - For deployment
+- `BUNNY_ACCESS_KEY` and `BUNNY_STORAGE_ZONE_NAME` (the Bunny Site to deploy to) - For deployment. Older sites may still name the second `BUNNY_PRODUCTION_STORAGE_ZONE_NAME`, which works until it is renamed; `gh-secrets` in the dotfiles does that.
 - `FORMSPARK_ID` - For contact forms (optional)
 - `BOTPOISON_PUBLIC_KEY` - For spam protection (optional)
 - `INDEXNOW_KEY` - For IndexNow search submission (optional)

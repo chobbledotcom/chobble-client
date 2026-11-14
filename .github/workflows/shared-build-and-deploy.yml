@@ -8,7 +8,7 @@ on:
         type: string
         default: 'ubicloud-standard-8'
       deploy-only-on-main:
-        description: 'Only deploy on main branch (no staging)'
+        description: 'Deprecated and ignored: only main deploys. Remove it from callers.'
         type: boolean
         default: false
       check-duplicated-code:
@@ -36,8 +36,12 @@ on:
         required: false
       BUNNY_ACCESS_KEY:
         required: false
+      BUNNY_STORAGE_ZONE_NAME:
+        required: false
+      # Older sites' name for BUNNY_STORAGE_ZONE_NAME, used when that is unset
       BUNNY_PRODUCTION_STORAGE_ZONE_NAME:
         required: false
+      # Deprecated and ignored: branches no longer deploy. Remove it from callers.
       BUNNY_STAGING_STORAGE_ZONE_NAME:
         required: false
       NTFY_TOPIC:
@@ -49,6 +53,7 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     env:
       INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
+      BUNNY_STORAGE_ZONE_NAME: ${{ secrets.BUNNY_STORAGE_ZONE_NAME || secrets.BUNNY_PRODUCTION_STORAGE_ZONE_NAME }}
     steps:
       - name: Checkout this repo
         uses: actions/checkout@v5
@@ -170,20 +175,12 @@ jobs:
         if: github.ref == 'refs/heads/main' && env.INDEXNOW_KEY != ''
         run: echo "${{ secrets.INDEXNOW_KEY }}" > "_site/${{ secrets.INDEXNOW_KEY }}.txt"
 
-      - name: Set deployment environment
-        id: deployment_env
-        run: |
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "storage_zone_name=${{ secrets.BUNNY_PRODUCTION_STORAGE_ZONE_NAME }}" >> $GITHUB_OUTPUT
-          else
-            echo "storage_zone_name=${{ secrets.BUNNY_STAGING_STORAGE_ZONE_NAME }}" >> $GITHUB_OUTPUT
-          fi
-
+      # Only main deploys; other branches just build, as a check.
       - name: Deploy to Bunny CDN
-        if: steps.deployment_env.outputs.storage_zone_name != '' && (inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main')
+        if: github.ref == 'refs/heads/main' && env.BUNNY_STORAGE_ZONE_NAME != ''
         uses: BunnyWay/actions/deploy-site@deploy-site_0.1.1
         with:
-          site: ${{ steps.deployment_env.outputs.storage_zone_name }}
+          site: ${{ env.BUNNY_STORAGE_ZONE_NAME }}
           directory: _site
           api_key: ${{ secrets.BUNNY_ACCESS_KEY }}
           cli_version: "0.19"
