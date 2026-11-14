@@ -11,14 +11,6 @@ on:
         description: 'Only deploy on main branch (no staging)'
         type: boolean
         default: false
-      bunny-storage-endpoint:
-        description: 'Bunny CDN storage endpoint'
-        type: string
-        default: 'https://storage.bunnycdn.com'
-      replication-timeout:
-        description: 'Bunny CDN replication timeout'
-        type: string
-        default: '15000'
     secrets:
       INDEXNOW_KEY:
         required: false
@@ -30,15 +22,7 @@ on:
         required: false
       BUNNY_PRODUCTION_STORAGE_ZONE_NAME:
         required: false
-      BUNNY_PRODUCTION_STORAGE_ZONE_PASSWORD:
-        required: false
-      BUNNY_PRODUCTION_PULL_ZONE_ID:
-        required: false
       BUNNY_STAGING_STORAGE_ZONE_NAME:
-        required: false
-      BUNNY_STAGING_STORAGE_ZONE_PASSWORD:
-        required: false
-      BUNNY_STAGING_PULL_ZONE_ID:
         required: false
       NTFY_TOPIC:
         required: false
@@ -47,6 +31,9 @@ jobs:
   build:
     name: Build and Deploy
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      deployments: write
     env:
       INDEXNOW_KEY: ${{ secrets.INDEXNOW_KEY }}
     steps:
@@ -119,28 +106,19 @@ jobs:
         run: |
           if [ "${{ github.ref }}" = "refs/heads/main" ]; then
             echo "storage_zone_name=${{ secrets.BUNNY_PRODUCTION_STORAGE_ZONE_NAME }}" >> $GITHUB_OUTPUT
-            echo "storage_zone_password=${{ secrets.BUNNY_PRODUCTION_STORAGE_ZONE_PASSWORD }}" >> $GITHUB_OUTPUT
-            echo "pull_zone_id_deploy=${{ secrets.BUNNY_PRODUCTION_PULL_ZONE_ID }}" >> $GITHUB_OUTPUT
           else
             echo "storage_zone_name=${{ secrets.BUNNY_STAGING_STORAGE_ZONE_NAME }}" >> $GITHUB_OUTPUT
-            echo "storage_zone_password=${{ secrets.BUNNY_STAGING_STORAGE_ZONE_PASSWORD }}" >> $GITHUB_OUTPUT
-            echo "pull_zone_id_deploy=${{ secrets.BUNNY_STAGING_PULL_ZONE_ID }}" >> $GITHUB_OUTPUT
           fi
 
-      - name: Deploy to Bunny
-        if: inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main'
-        uses: R-J-dev/bunny-deploy@v3.0.0
+      - name: Deploy to Bunny CDN
+        if: (inputs.deploy-only-on-main == false || github.ref == 'refs/heads/main') && steps.deployment_env.outputs.storage_zone_name != ''
+        uses: BunnyWay/actions/deploy-site@deploy-site_0.1.1
         with:
-          access-key: ${{ secrets.BUNNY_ACCESS_KEY }}
-          directory-to-upload: _site
-          storage-endpoint: "${{ inputs.bunny-storage-endpoint }}"
-          storage-zone-name: ${{ steps.deployment_env.outputs.storage_zone_name }}
-          storage-zone-password: ${{ steps.deployment_env.outputs.storage_zone_password }}
-          concurrency: "10"
-          enable-delete-action: true
-          enable-purge-pull-zone: true
-          pull-zone-id: ${{ steps.deployment_env.outputs.pull_zone_id_deploy }}
-          replication-timeout: "${{ inputs.replication-timeout }}"
+          site: ${{ steps.deployment_env.outputs.storage_zone_name }}
+          directory: _site
+          api_key: ${{ secrets.BUNNY_ACCESS_KEY }}
+          cli_version: "0.19"
+          deployments: true
 
       - name: Get site URL
         id: site-url
